@@ -2,12 +2,16 @@ const Complaint = require('../models/ComplaintM')
 const mongoose = require('mongoose')
 
 const getComplaints = async (req, res) => {
-    try {
-        const complaints = await Complaint.find({}).sort({ createdAt: -1 })
-        res.status(200).json(complaints)
-    } catch (error) {
-        res.status(400).json({ error: error.message })
-    }
+  const { hostelId } = req.query;
+
+  try {
+    const query = hostelId ? { hostelId } : {};
+    
+    const complaints = await Complaint.find(query).sort({ createdAt: -1 })
+    res.status(200).json(complaints)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
 }
 
 const getComplaint = async (req, res) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo , useCallback} from 'react';
 import ComplaintService from '../services/ComplaintService';
 import { useNavigate } from 'react-router-dom';
 import TaskItem from '../components/TaskItem';
@@ -6,6 +6,7 @@ import WardenDetailPanel from '../components/WardenDetailPanel';
 import { COMPLAINT_CATEGORIES } from '../config';
 import { useAuth } from '../context/AuthContext';
 import './WardenDashboard.css';
+
 
 const getISODate = (date) => {
   return date.toISOString().split('T')[0];
@@ -29,38 +30,57 @@ function WardenDashboard() {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
 
-useEffect(() => {
-    // We only fetch data if the user object is available
+  const refreshDashboard = useCallback(async () => {
     if (currentUser) {
-      const fetchAllData = async () => {
-        try {
-          const [complaintsData, maintenanceData] = await Promise.all([
-            // Pass the user's hostelId to both services
-            ComplaintService.getAllComplaints(currentUser.hostelId),
-            ComplaintService.getMaintenanceChecks(currentUser.hostelId)
-          ]);
-          setAllComplaints(complaintsData);
-          setMaintenanceChecks(maintenanceData);
-        } catch (error) {
-          console.error("Failed to fetch data:", error);
-        }
-      };
-      fetchAllData();
+      try {
+        const [complaintsData, maintenanceData] = await Promise.all([
+          ComplaintService.getAllComplaints(currentUser.hostelId),
+          ComplaintService.getMaintenanceChecks(currentUser.hostelId)
+        ]);
+        setAllComplaints(complaintsData);
+        setMaintenanceChecks(maintenanceData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
     }
+  }, [currentUser]);
+
+useEffect(() => {
+    // // We only fetch data if the user object is available
+    // if (currentUser) {
+    //   const fetchAllData = async () => {
+    //     try {
+    //       const [complaintsData, maintenanceData] = await Promise.all([
+    //         // Pass the user's hostelId to both services
+    //         ComplaintService.getAllComplaints(currentUser.hostelId),
+    //         ComplaintService.getMaintenanceChecks(currentUser.hostelId)
+    //       ]);
+    //       setAllComplaints(complaintsData);
+    //       setMaintenanceChecks(maintenanceData);
+    //     } catch (error) {
+    //       console.error("Failed to fetch data:", error);
+    //     }
+    //   };
+    //   fetchAllData();
+    // }
+
+    refreshDashboard();
     
     const handleResize = () => setIsMobile(window.innerWidth <= 900);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [currentUser]);
+  }, [refreshDashboard]);
 
   const allTasks = useMemo(() => {
     const complaintsAsTasks = allComplaints.map(c => ({
       ...c,
+      id: c._id || c.id,
       type: 'complaint',
       date: c.scheduledFor || c.createdAt,
     }));
     const maintenanceAsTasks = maintenanceChecks.map(m => ({
       ...m,
+      id: m._id || m.id,
       type: 'maintenance',
       date: m.scheduledFor,
     }));
@@ -107,6 +127,7 @@ useEffect(() => {
         <WardenDetailPanel 
           complaintId={selectedComplaintId} 
           onClose={() => setSelectedComplaintId(null)}
+          onUpdate={refreshDashboard}
         />
       );
     }
