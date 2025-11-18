@@ -108,16 +108,15 @@ class ComplaintService {
     return localStorage.getItem('token');
   }
 
+  // ==============================================================
+  // 1. COMPLAINT ENDPOINTS (Team B-2 Work)
+  // ==============================================================
+
   static async getAllComplaints() {
     try {
       const token = this.getToken();
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const response = await fetch('/api/complaints', {
         method: 'GET',
@@ -125,25 +124,23 @@ class ComplaintService {
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch complaints');
+      return data.map(complaint => ({
+        ...complaint,       // Keep all original fields (title, status, etc.)
+        id: complaint._id,  // Map _id to id
+        type: 'complaint'   // Ensure type is set for filtering
+      }));
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch complaints');
-      }
-
-      return data;
     } catch (error) {
       console.error('Error fetching complaints:', error);
-      return [];
+      return []; // Return empty array on error to prevent crash
     }
   }
 
   static async createComplaint(complaintData) {
     try {
       const token = this.getToken();
-      
-      if (!token) {
-        throw new Error('No login token found');
-      }
+      if (!token) throw new Error('No login token found');
 
       const response = await fetch('/api/complaints', {
         method: 'POST',
@@ -155,10 +152,7 @@ class ComplaintService {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create complaint');
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to create complaint');
 
       return data;
     } catch (error) {
@@ -170,13 +164,8 @@ class ComplaintService {
   static async getComplaintById(id) {
     try {
       const token = this.getToken();
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const response = await fetch(`/api/complaints/${id}`, {
         method: 'GET',
@@ -184,10 +173,7 @@ class ComplaintService {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch complaint');
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch complaint');
 
       return data;
     } catch (error) {
@@ -199,9 +185,8 @@ class ComplaintService {
   static async voteOnComplaint(id) {
     try {
       const token = this.getToken();
-      
       const response = await fetch(`/api/complaints/${id}`, {
-        method: 'PATCH',
+        method: 'PATCH', // Or PUT, depending on backend route
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -210,14 +195,81 @@ class ComplaintService {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to vote on complaint');
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to vote on complaint');
 
       return data;
     } catch (error) {
       console.error('Error voting on complaint:', error);
+      throw error;
+    }
+  }
+
+  // ==============================================================
+  // 2. MAINTENANCE ENDPOINTS (Team B-1 Work - COMPLETED)
+  // ==============================================================
+
+  static async getMaintenanceChecks() {
+    try {
+      const token = this.getToken();
+      const response = await fetch('/api/maintenance', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        cache: 'no-store' // Ensure we don't get cached 304 responses
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.msg || 'Failed to fetch maintenance tasks');
+      }
+
+      const data = await response.json();
+
+      // --- DATA MAPPING IS CRITICAL HERE ---
+      // The backend returns nested objects (task.definition.title).
+      // The dashboard expects flat objects (task.title).
+      return data.map(task => ({
+        id: task.taskId,             // Use sequential ID
+        mongoId: task._id,           // Keep reference to Mongo ID
+        // Flatten the definition details:
+        title: task.definition ? task.definition.title : 'Unknown Task',
+        category: task.definition ? task.definition.category : 'Maintenance',
+        location: task.definition ? task.definition.default_location : 'General',
+        // Pass through task details:
+        status: task.status,
+        scheduledFor: task.scheduledFor,
+        type: 'maintenance'          // Essential for Dashboard filters
+      }));
+
+    } catch (error) {
+      console.error('Error fetching maintenance checks:', error);
+      return []; 
+    }
+  }
+
+  static async completeMaintenanceTask(taskId) {
+    try {
+      const token = this.getToken();
+      const response = await fetch(`/api/maintenance/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({})
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to complete task');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error completing task:', error);
       throw error;
     }
   }
