@@ -1,171 +1,225 @@
-// frontend/src/services/ComplaintService.js
-import AuthService from './AuthService';
+// import axios from 'axios';
 
-// =================================================================
-// --- COMPLAINT FUNCTIONS (UNCHANGED) ---
-// =================================================================
+// // This is the URL of your backend server
+// const API_URL = 'http://localhost:5000/api'; 
 
-let mockComplaints = [
-  // --- Kalpana Chawla ---
-  {
-    id: 'c1001',
-    title: 'Leaking Faucet in Room 201',
-    description: 'The tap in the bathroom won\'t stop dripping.',
-    room: 'KC-201',
-    category: 'Plumbing',
-    status: 'Submitted',
-    submittedBy: 's-kc101',
-    createdAt: new Date('2025-11-18T09:30:00Z').toISOString(),
-    scheduledFor: null,
-    votes: 12,
-    hostelId: 'kalpana-chawla'
-  },
-  {
-    id: 'c1002',
-    title: 'Wi-Fi not working on 3rd floor',
-    // ... (all other mock complaint data remains unchanged) ...
-    hostelId: 'kalpana-chawla'
-  },
-  // ... (Anandi, C.V.Raman, J.C.Bose, Homi Baba mocks) ...
-  {
-    id: 'c1006',
-    title: 'AC unit making loud noises',
-    // ...
-    hostelId: 'homi-baba'
-  }
-];
+// // --- Helper function to get the token ---
+// // It assumes you save your user's info in localStorage after login
+// const getToken = () => {
+//   // Check if 'userInfo' exists in localStorage
+//   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  
+//   // Return the token, or null if it's not there
+//   return userInfo ? userInfo.token : null; 
+// };
+
+// /**
+//  * Gets all complaints for the logged-in user.
+//  * This is a REAL API call.
+//  */
+// const getAllComplaints = async () => {
+//   const token = getToken();
+
+//   // If there's no token, we can't get complaints
+//   if (!token) {
+//     console.warn('No login token found, returning empty list.');
+//     return []; // Return an empty array so the page doesn't crash
+//   }
+
+//   const config = {
+//     headers: {
+//       Authorization: `Bearer ${token}`, // <-- Send the token to the backend
+//     },
+//   };
+
+//   try {
+//     // Make the GET request to your backend
+//     const { data } = await axios.get(`${API_URL}/complaints`, config);
+//     return data;
+//   } catch (error) {
+//     console.error('Error fetching complaints:', error.response ? error.response.data : error.message);
+//     throw error;
+//   }
+// };
+
+// /**
+//  * Creates a new complaint.
+//  * This is a REAL API call.
+//  */
+// const createComplaint = async (complaintData) => {
+//   const token = getToken();
+
+//   if (!token) {
+//     throw new Error('No login token found. Please log in again.');
+//   }
+
+//   const config = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       Authorization: `Bearer ${token}`, // <-- Send the token
+//     },
+//   };
+
+//   try {
+//     // Make the POST request to your backend
+//     const { data } = await axios.post(
+//       `${API_URL}/complaints`, 
+//       complaintData, 
+//       config
+//     );
+//     return data;
+//   } catch (error) {
+//     console.error('Error creating complaint:', error.response ? error.response.data : error.message);
+//     throw error;
+//   }
+// };
+
+// // --- (You can add your other REAL API calls here) ---
+// // For example, to get a single complaint:
+// const getComplaintById = async (id) => {
+//   const token = getToken();
+//   const config = { headers: { Authorization: `Bearer ${token}` } };
+//   const { data } = await axios.get(`${API_URL}/complaints/${id}`, config);
+//   return data;
+// };
+
+// // To vote on a complaint:
+// const voteOnComplaint = async (id) => {
+//   const token = getToken();
+//   const config = { headers: { Authorization: `Bearer ${token}` } };
+//   const { data } = await axios.post(`${API_URL}/complaints/vote/${id}`, {}, config);
+//   return data;
+// };
+
+// // --- EXPORT THE REAL SERVICE ---
+// const ComplaintService = {
+//   getAllComplaints,
+//   createComplaint,
+//   getComplaintById,
+//   voteOnComplaint,
+//   // (add getMaintenanceChecks when you build that API)
+// };
+
+// export default ComplaintService;
 
 class ComplaintService {
 
-  // --- Helper function MOVED INSIDE and made STATIC ---
-  static getAuthHeaders() {
-    const token = AuthService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
+  static getToken() {
+    return localStorage.getItem('token');
   }
 
-  // --- Complaint functions are UNCHANGED ---
-  static async getAllComplaints(hostelId) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!hostelId) {
-          return resolve([]);
-        }
-        const cleanHostelId = hostelId.toLowerCase().trim();
-        const complaints = mockComplaints.filter(c => 
-          c.hostelId.toLowerCase().trim() === cleanHostelId
-        );
-        resolve([...complaints]);
-      }, 500);
-    });
+  static async getAllComplaints() {
+    try {
+      const token = this.getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/complaints', {
+        method: 'GET',
+        headers: headers,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch complaints');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      return [];
+    }
+  }
+
+  static async createComplaint(complaintData) {
+    try {
+      const token = this.getToken();
+      
+      if (!token) {
+        throw new Error('No login token found');
+      }
+
+      const response = await fetch('/api/complaints', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(complaintData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create complaint');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error creating complaint:', error);
+      throw error;
+    }
   }
 
   static async getComplaintById(id) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const complaint = mockComplaints.find(c => c.id === id);
-        if (complaint) {
-          resolve(complaint);
-        } else {
-          reject(new Error('Complaint not found'));
-        }
-      }, 300);
-    });
-  }
-  
-  static async createComplaint(complaintData, hostelId) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newComplaint = {
-          ...complaintData,
-          id: `c${Math.floor(Math.random() * 9000) + 1000}`,
-          status: 'Submitted',
-          createdAt: new Date().toISOString(),
-          votes: 1,
-          hostelId: hostelId
-        };
-        mockComplaints.unshift(newComplaint);
-        resolve(newComplaint);
-      }, 700);
-    });
-  }
+    try {
+      const token = this.getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+      };
 
-  static async updateComplaintStatus(id, newStatus) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const complaintIndex = mockComplaints.findIndex(c => c.id === id);
-        if (complaintIndex > -1) {
-          mockComplaints[complaintIndex].status = newStatus;
-          resolve(mockComplaints[complaintIndex]);
-        } else {
-          reject(new Error('Complaint not found for update'));
-        }
-      }, 400);
-    });
-  }
-  
-  static async deleteComplaint(id) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        mockComplaints = mockComplaints.filter(c => c.id !== id);
-        resolve({ success: true });
-      }, 500);
-    });
-  }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
-  // =================================================================
-  // --- MAINTENANCE FUNCTIONS (CHANGED TO LIVE API) ---
-  // =================================================================
+      const response = await fetch(`/api/complaints/${id}`, {
+        method: 'GET',
+        headers: headers,
+      });
 
-  /**
-   * REPLACED: This now calls your real GET /api/maintenance
-   */
-  static async getMaintenanceChecks() {
-    console.log("Fetching LIVE data for getMaintenanceChecks()");
-    const response = await fetch('/api/maintenance', {
-      method: 'GET',
-      // We now call it as a static method of the class
-      headers: ComplaintService.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.msg || 'Could not fetch maintenance tasks');
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch complaint');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching complaint details:', error);
+      throw error;
     }
-    
-    // Map backend data to the format the frontend dashboard expects
-    const tasks = await response.json();
-    return tasks.map(task => ({
-      id: task.taskId, // Frontend expects 'id', backend has 'taskId'
-      title: task.definition.title,
-      status: task.status,
-      scheduledFor: task.scheduledFor,
-      hostelId: task.hostel_id,
-      category: task.definition.category,
-      location: task.definition.default_location,
-      type: 'maintenance' // Manually add type for the dashboard filter
-    }));
   }
 
-  /**
-   * NEW: This calls your real PUT /api/maintenance/:taskId
-   */
-  static async completeMaintenanceTask(taskId) {
-    console.log(`Sending LIVE request to complete task ${taskId}`);
-    const response = await fetch(`/api/maintenance/${taskId}`, {
-      method: 'PUT',
-      // We now call it as a static method of the class
-      headers: ComplaintService.getAuthHeaders(),
-      body: JSON.stringify({})
-    });
+  static async voteOnComplaint(id) {
+    try {
+      const token = this.getToken();
+      
+      const response = await fetch(`/api/complaints/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ $inc: { votes: 1 } }),
+      });
 
-    if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.msg || 'Could not complete task');
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to vote on complaint');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error voting on complaint:', error);
+      throw error;
     }
-    return response.json();
   }
 }
 

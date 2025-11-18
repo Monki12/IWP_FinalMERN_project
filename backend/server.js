@@ -17,15 +17,23 @@ mongoose.connect(process.env.MONGO_URI)
 const authRoutes = require('./routes/auth');
 const maintenanceRoutes = require('./routes/maintenance'); 
 const { verifyToken } = require('./middleware/auth');
+const complaintroutes = require('./routes/complaints')
 
 // Mount the Auth Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/maintenance', maintenanceRoutes); 
+app.use('/api/complaints', complaintroutes);
+
+app.use((req,res,next) => {
+    console.log(req.path, req.method)
+    next()
+})
 
 // Basic Test Route
 app.get('/', (req, res) => {
     res.send('Hostel Complaint Backend API is Running...');
 });
+
 
 
 // Start Server
