@@ -3,16 +3,20 @@ import ComplaintService from '../services/ComplaintService';
 import './WardenDetailPanel.css';
 
 const getISODate = (date) => {
-  return date.toISOString().split('T')[0];
+  if (!date) return '';
+  return new Date(date).toISOString().split('T')[0];
 };
 
-function WardenDetailPanel({ complaintId, onClose }) {
+function WardenDetailPanel({ complaintId, onClose , onUpdate}) {
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false); // New saving state
   const [newComment, setNewComment] = useState('');
   const [activeTab, setActiveTab] = useState('details');
 
   const [currentStatus, setCurrentStatus] = useState('');
+  const [scheduledDate, setScheduledDate] = useState(''); // Track date state
+  
   const today = getISODate(new Date());
 
   useEffect(() => {
@@ -23,6 +27,8 @@ function WardenDetailPanel({ complaintId, onClose }) {
         const data = await ComplaintService.getComplaintById(complaintId);
         setComplaint(data);
         setCurrentStatus(data.status);
+        // Initialize date state
+        setScheduledDate(data.scheduledFor ? getISODate(data.scheduledFor) : '');
         setLoading(false);
       } catch (error) {
         console.error("Failed to fetch complaint:", error);
@@ -32,6 +38,23 @@ function WardenDetailPanel({ complaintId, onClose }) {
     fetchComplaint();
   }, [complaintId]);
 
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      // Call service with both status and date
+      await ComplaintService.updateComplaint(complaintId, {
+        status: currentStatus,
+        scheduledFor: scheduledDate || null 
+      });
+      setSaving(false);
+      if (onUpdate) onUpdate();
+      onClose(); // Close panel to refresh dashboard
+    } catch (error) {
+      console.error("Failed to save:", error);
+      setSaving(false);
+    }
+  };
+
   const handleCommentSubmit = (e) => {
     e.preventDefault();
     if (newComment.trim() === '') return;
@@ -39,10 +62,8 @@ function WardenDetailPanel({ complaintId, onClose }) {
     setNewComment('');
   };
   
-  const handleStatusChange = async (e) => {
-    const newStatus = e.target.value;
-    setCurrentStatus(newStatus);
-    console.log(`Updating status to ${newStatus}`);
+  const handleStatusChange = (e) => {
+    setCurrentStatus(e.target.value);
   };
 
   const timelineEvents = [
@@ -69,7 +90,7 @@ function WardenDetailPanel({ complaintId, onClose }) {
         <header className="panel-header">
           <h2 className="panel-title">
             {complaint.title}
-            <span>ID: #{complaint.id}</span>
+            <span>ID: #{complaintId}</span>
           </h2>
         </header>
         
@@ -110,7 +131,8 @@ function WardenDetailPanel({ complaintId, onClose }) {
                     type="date"
                     className="warden-date-input"
                     min={today}
-                    defaultValue={complaint.scheduledFor ? getISODate(new Date(complaint.scheduledFor)) : ''}
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
                   />
                 </div>
               </section>
@@ -128,6 +150,16 @@ function WardenDetailPanel({ complaintId, onClose }) {
                   <strong>{new Date(complaint.createdAt).toLocaleString()}</strong>
                 </div>
               </section>
+
+              <div className="panel-actions">
+                <button 
+                  className="save-button" 
+                  onClick={handleSave} 
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </>
           )}
 

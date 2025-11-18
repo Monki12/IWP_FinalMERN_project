@@ -108,34 +108,38 @@ class ComplaintService {
     return localStorage.getItem('token');
   }
 
-  static async getAllComplaints() {
-    try {
-      const token = this.getToken();
-      const headers = {
-        'Content-Type': 'application/json',
-      };
+  static async getAllComplaints(hostelId) {
+  try {
+    const token = this.getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/complaints', {
-        method: 'GET',
-        headers: headers,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch complaints');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error fetching complaints:', error);
-      return [];
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
+
+    const url = hostelId 
+      ? `/api/complaints?hostelId=${hostelId}` 
+      : '/api/complaints';
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch complaints');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching complaints:', error);
+    return [];
   }
+}
 
   static async createComplaint(complaintData) {
     try {
@@ -221,6 +225,63 @@ class ComplaintService {
       throw error;
     }
   }
+
+  static async getMaintenanceChecks(hostelId) {
+    try {
+      const token = this.getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      // The backend relies on req.user, so the token is mandatory
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // The controller uses the logged-in user's hostel_id, 
+      // so we don't strictly need to pass it in the URL query, 
+      // but hitting the endpoint with the token is key.
+      const response = await fetch('/api/maintenance', {
+        method: 'GET',
+        headers: headers,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch maintenance checks');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching maintenance checks:', error);
+      return [];
+    }
+  }
+
+  static async updateComplaint(id, updateData) {
+    try {
+      const token = this.getToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`/api/complaints/${id}`, {
+        method: 'PATCH',
+        headers: headers,
+        body: JSON.stringify(updateData), 
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update complaint');
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating complaint:', error);
+      throw error;
+    }
+  }
 }
+
+
 
 export default ComplaintService;

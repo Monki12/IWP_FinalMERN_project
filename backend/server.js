@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // --- Define Routes ---
 const authRoutes = require('./routes/auth');
-const maintenanceRoutes = require('./routes/maintenance'); 
+const maintenanceRoutes = require('./routes/maintenanceRoutes'); 
 const { verifyToken } = require('./middleware/auth');
 const complaintroutes = require('./routes/complaints')
 
