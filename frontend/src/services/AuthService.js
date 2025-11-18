@@ -160,6 +160,7 @@ class AuthService {
       });
 
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (!response.ok) {
         throw new Error(data.msg || 'Invalid email or password');
